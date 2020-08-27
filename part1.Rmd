@@ -1,0 +1,161 @@
+---
+title: "DEMONSTRATIVE SIMULATION OF THE CENTRAL LIMIT THEOREM"
+author: "Oluwadare, Margaret"
+date: "8/27/2020"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+SYNOPSIS
+---------
+This project is to investigate the exponential distribution and compare it to the Central Limit Theorem. For this particular case the distribution parameter lambda will be set to 0.2 for all of the simulations. We will be comparing the distribution of 40 averages of exponentials distribution over 1000 simulations.
+
+SIMULATIONS:  
+------------  
+The exponential distribution can be simulated in R with `rexp(n, lambda)`, where `lambda` is the rate parameter and `n` is the number of observations. For the purpose of this project value of `lambda` is set to `0.2`. First we load the `ggplot2` plotting library. 
+
+```{r Load library, echo=TRUE, warning=FALSE}
+library(ggplot2)
+
+```
+
+
+```{r distribution of sample means, echo=TRUE}
+numcases <- 1000              #how many samples to take?
+lambda <- 0.2
+ntimes <- 40
+```
+
+Set the seed of the random number generator for reproducibility.  
+```{r seed, echo=TRUE}
+set.seed(1234)
+```
+ Perform simulations
+```{r simulate values, echo=TRUE}
+i2 <- 1                     #initialize counters
+
+for (i in 1:ntimes)               #repeat n times
+{  sample <- 0 ;
+  k <- 0                #start off with an empty set of counters
+for (j in 1:i2)          #  inner loop 
+{
+  sample <- sample +matrix(rexp(ntimes * numcases, rate = lambda), numcases)
+  k <- k+1  }
+x <- sample/k
+out <- c(k,mean(x),sd(x))
+}
+```
+compute the mean for each of the 1000 simulations(rows)
+
+```{r Row means for 1000 simulations, echo=TRUE}
+simulationMean <- rowMeans(x)
+
+```
+We plot the simulation data to visualize it
+
+```{r Visualize simulated data, echo=TRUE}
+par(mfrow = c(1,2)) 
+hist(x, prob = T, breaks = 40, xlim = c(2,9), main = paste( "Exponential Function Simulation" ))
+abline(v = lambda^-1, col = "blue", lwd = 3) 
+
+hist(simulationMean, prob = T,  breaks = 40, xlim = c(2,9), main = paste( "Exponential Function Simulation Means" ))
+abline(v = lambda^-1, col = "red", lwd = 3) 
+
+```
+
+
+SAMPLE MEAN VS THEORETICAL MEAN
+-----------------------------------
+Sample mean is simply the mean of the simulated average values of the exponentials. Theoretical mean of the average values of exponentials is 1/lambda. We will plot the distribution of the average exponentials using histogram.
+
+```{r Mean of simulation, echo=TRUE}
+sample_mean <- mean(simulationMean)
+sample_mean
+
+theo_mean <- 1/lambda
+theo_mean
+
+hist(simulationMean, xlab = "Exponentials mean", main = "Distribution of the  Exponentials mean")
+abline(v = sample_mean, col = "magenta")
+abline(v = theo_mean, col = "green")
+
+```
+
+The sample mean is 5.042438 while the theoretical mean is 5. As seen in the histogram, the sample mean of the average exponentials (magenta vertical line) is close to the theoretical mean of an exponential distribution (green vertical line).
+
+VARIANCE COMPARISON
+-------------------
+The following code will compute the actual varaince of the simualted mean 
+
+```{r}
+sample_var <- var(simulationMean)
+sample_sd <- sd(simulationMean)
+theo_var  <- (1 / lambda)^2 / (ntimes) 
+theo_sd  <- 1/(lambda * sqrt(ntimes))
+
+sample_var
+sample_sd
+theo_var
+theo_sd
+
+```
+From our result,  we can see that the actual variance (0.6789) of the simulated mean sample data is very close to the theoretical variance (0.625) of original data distribution.
+
+EXAMINE THE NORMALITY OF THE EXPONENTIALS AVERAGES DISTRIBUTION
+---------------------------------------------------------------
+We will consider the minimum and maximum of the average exponentials. Then recreate a histogram of average exponentials with more bins. Draw the density of the average exponentials and draw the normal qqplot. The following investigates whether the exponential distribution is approximately normal. Due to the Central Limit Theorem, the means of the sample simulations should follow a normal distribution.
+
+```{r Histogram and qqPlot, echo=TRUE}
+par(mfrow = c(1,2))
+plotdata <- data.frame(simulationMean)
+distplot <- ggplot(plotdata, aes(x = simulationMean))
+distplot <- distplot + geom_histogram(aes(y = ..density..), colour = "black",
+                        fill = "lightblue")
+distplot <- distplot + labs(title = "Distribution of the  Exponentials mean", x = "Mean of Samples", y = "Density")
+distplot <- distplot + geom_vline(aes(xintercept = sample_mean, colour = "seashell"))
+distplot <- distplot + geom_vline(aes(xintercept = theo_mean, colour = "gold1" ))
+distplot <- distplot + stat_function(fun = dnorm, args = list(mean = sample_mean, sd = sample_sd), color = "greenyellow", size = 1.0)
+distplot <- distplot + stat_function(fun = dnorm, args = list(mean = theo_mean, sd = theo_sd), colour = "red", size = 1.0)
+distplot
+
+qqnorm(simulationMean)
+qqline(simulationMean, col = 4)
+
+```
+
+
+The density of the actual data is shown by the seashell bars. The theoretical mean and the sample mean are so close that they nearly overlap. The “red” line shows the normal curve formed by the the theoretical mean and standard deviation. The “greenyellow” line shows the curve formed by the sample mean and standard deviation. As you can see from the graph, the distribution of means of 40 exponential distributions is close to the normal distribution with the expected theoretical values based on the given lambda.
+
+CONFIDENCE INTERVAL COMPARISON
+------------------------------
+Next we check the confidence interval levels to see how they compare.
+
+Sample CI
+----------
+ To Calculate the sample confidence interval using sampleCI = mean of x plus or minus the 97.5th normal quantile times the standard error of the mean standard deviation of x divided by the square root of n (the length of the vector x).
+
+```{r saple CI, echo=TRUE}
+sampleCI <- round(mean(simulationMean) + c(-1,1)*1.96*sample_sd/sqrt(ntimes),3)
+sampleCI
+
+```
+Theoretical CI
+---------------
+To Calculate the theoretical confidence interval we use theoCI = theoMean of x plus or minus the 97.5th normal quantile times the standard error of the mean standard deviation of x divided by the square root of n (the length of the vector x).
+
+```{r Theoritical CI, echo=TRUE}
+theoCI <- theo_mean+ c(-1,1) * 1.96 * sqrt(theo_var)/sqrt(ntimes)
+theoCI
+
+```
+
+The sample confidence interval is 4.787 5.298 and the theoretical confidence level is 4.755 5.245. The confidence levels also match closely. Again, proving the distribution is approximately normal.
+
+CONCLUSION
+----------
+As shown above, the distribution of means of the simulated exponential distributions follows a normal distribution due to the Central Limit Theorem. If the number of samples increase (currently at 1000), the distribution should be even closer to the standard normal distribution.
