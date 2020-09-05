@@ -1,0 +1,296 @@
+---
+title: "Basic Inferential Data Analysis"
+author: "Oluwadare, Margaret"
+date: "8/27/2020"
+output:
+  pdf_document:
+    latex_engine: xelatex
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+DATA DESCRIPTION  
+----------------  
+The response is the length of odontoblasts (teeth) in each of 10 guinea pigs at each of three dose levels of Vitamin C (0.5, 1, and 2 mg) with each of two delivery methods (orange juice or ascorbic acid). We're going to analyze the ToothGrowth data in the R datasets package by performing the following task:
+1.	Load the ToothGrowth data and perform some basic exploratory data analyses
+2.	Provide a basic summary of the data.
+3.	Use confidence intervals and/or hypothesis tests to compare tooth growth by supplement      and dose by using Only the techniques from class, (even if there's other approaches         worth considering)
+4.	State your conclusions and the assumptions needed for your conclusions.
+
+We start the program by loading neccesary library and the ToothGrowth Data to investigate its structure
+
+```{r Load data and libraries, echo=TRUE, error=FALSE, message=FALSE, warning=FALSE}
+library(knitr)
+library(ggplot2)
+library(dplyr)
+library(datasets)
+library(gridExtra)
+data(ToothGrowth)
+attach(ToothGrowth)
+```  
+
+PRE-PROCESSING AND EXPLORATORY DATA ANALYSIS
+--------------------------------------------
+
+The following code will give us a brief on the nature of data we are dealing with.  
+
+```{r Exploratory data analysis, echo=TRUE, error=FALSE, warning=FALSE}
+str(ToothGrowth)
+head(ToothGrowth)
+summary(ToothGrowth)
+unique(ToothGrowth$len)
+unique(ToothGrowth$supp)
+unique(ToothGrowth$dose)
+```  
+
+From the above, our data is a data frame of 60 observations and 3 varaibles vis: `len`(length), `supp` (supplements) and `dose`(dose level administered). We also notice that `len` and `dose` are number class whereas `supp` is a factor variable with two levels: `OJ` (Orange juice) and `VC` (vitamin C or ascorbic acid). The summary statistics indicates that the minimum and maximum tooth `length` is 4.20 and 33.90 respectively with an average of 18.81, minimum and maximum `dose` level is 0.5 and 2.0 respectively with an average of 1.167, `suppliment` have a minimum level of 30 for both `OJ` and `VC`. We will plot a scater plot to visualize our data.  
+
+```{r Visualise the data, echo=TRUE}
+plot(ToothGrowth, main = "The toothgrowth data", col = c("blue","red", "green"))
+```  
+
+It seems that variable `dose` is rather a factor then a numeric value as seen in its unique value entries. Therefore, it will be converted into a factor variable.
+
+```{r convert dose to factor, echo=TRUE}
+ToothGrowth$dose <- as.factor(ToothGrowth$dose) 
+```
+We will produce a scatter box plot to depict tooth length by dose and type of adminstration
+
+```{r tooth length by dose and type of adminstration, echo=TRUE}
+set.seed(123)
+boxcat <- ggplot(ToothGrowth, aes(dose, len)) + 
+  geom_boxplot(aes(fill = supp)) + 
+  geom_jitter(alpha = I(3/4), aes(color = supp)) + 
+  scale_color_manual(values = c("orange","darkgreen")) + 
+  theme(legend.position = c(1,0.3), legend.justification = c(1,1)) + 
+  labs(title = "Scatter Plot of Tooth Length and Dose Levels",x = "Dose Levels", y = "Tooth Length")
+
+boxcat
+```
+
+The box plots seem to show, increasing the `dosage` increases the tooth growth. Orange juice is more effective than ascorbic acid for tooth growth when the dosage is 0.5 to 1.0 milligrams per day. Both types of supplements are equally as effective 
+when the dosage is 2.0 milligrams per day. To get a clearer picture a density plot for comparison between `Tooth Lengths` with respect to `Dose Levels` and `supplement` is performed in the following codes below.  
+
+```{r Marginal plot, echo=TRUE, error=FALSE, warning=FALSE}
+# Plotting Marginal Density of `Tooth Lengths`. 
+
+plt <- ggplot(ToothGrowth,aes(len,fill = supp)) + 
+  geom_density(alpha = .5) + 
+  coord_flip() + 
+  scale_fill_manual(values = c("orange","purple")) + 
+  theme(legend.position = "none") + 
+  labs(title = "Density Plot", y = "Density", x = "Tooth Length")
+
+plt
+
+grid.arrange(boxcat, plt, ncol = 2, nrow = 1, widths = c(4, 2))
+```  
+
+
+FURTHER ANALYSIS:  
+---------------- 
+We will compute the mean and varaince by application method (`supp`). from our results `OJ` have a mean of 20.66 and a varaince of 43.63. `Ascorbic acid` have a mean of 16.96 and a varinace of 68.32. 
+
+```{r Mean and variance by supplement, echo=TRUE, error=FALSE}
+appmthd <- split(ToothGrowth$len, ToothGrowth$supp)
+sapply(appmthd, mean)
+
+# Varaince of supplement
+sapply(appmthd, var)
+```
+
+We will perform similar analysis for dose level. 
+
+```{r Mean and varaince of dose level, echo=TRUE}
+dozmean <- split(ToothGrowth$len, ToothGrowth$dose)
+sapply(dozmean, mean)
+
+# Variance for each dose
+sapply(dozmean, var) 
+
+```  
+We will perform a plot of the control varaible as a realtion to the target varaible to aid us in formulating our test of hyothesis for this analysis. The following plots produces plots for the measure of the following relationship:
+
+1. Plot of tooth length (`len`) against supplement (`supp`)
+2. box plot of `len` vs `supp`
+3. line plot of `len` vs `dose`
+4. box plot of `len` vs `dose`
+5. box plot of `len` vs `dose` and `supp` interaction effect.
+
+```{r Evaluation Of control variable on target variable, echo=TRUE}
+
+par(mfrow = c(3,3), mar = c(4,4,2,0), oma = c(0,0,2,0))
+plot(aggregate(len~supp,ToothGrowth,mean), ylab = "length mean", col = c("blue","red"))
+boxplot(len~supp,ToothGrowth,xlab = "supp", ylab = "length", col = c("brown", "darkgreen"))
+plot(aggregate(len~dose,ToothGrowth,mean), pch = 19, ylab = "mean length")
+lines(aggregate(len~dose,ToothGrowth,mean), col = c("cyan4","red", "blue"))
+boxplot(len~dose,ToothGrowth,xlab = "dose", ylab = "length", col = c("magenta","gold", "chocolate") )
+boxplot(len~supp+dose,ToothGrowth,xlab = "supp+dose", ylab = "length", col = c("darkgoldenrod","coral4", "chocolate1"))
+title(main = "Evaluation Of control varaible on target variable",outer = T)
+
+```
+
+HYPOTHESIS TESTING USING CONFIDENCE INTERVAL:  
+----------------------------------------------  
+In this work we are going to evaluate the individual effect of control variables `supp` and `dose` on the target variable `len`, as well as their interaction effect. Assuming that a higher tooth length `len` value indicates a higher
+impact and a higher measure of `dose` indicates a higher dose, a first evaluation of the last plot above yields the following hypotheses :
+1. `Supp`(`OJ`) has a higher impact on the target variable `len`.
+2. Higher measure of control variable `dose` effect on target variable `len`.
+3. The combined effect of the control variables `supp` and `dose`, shows that `OJ` has higher impact on target variable `len` for `dose` measures of  0.5  and 1.
+4. For combined impact of control variables `supp` and `dose`, `OJ` and `VC` have same impact on target variable `len` for `dose` at measure 2mg.
+
+Hypothesis #1: 
+-------------
+`Supp`(`OJ`) has a higher impact on the target variable `len`.
+
+```{r Hypothesis 1, echo=TRUE}
+HYP1 = t.test(len~supp, paired=F, var.equal=F,data=ToothGrowth)
+print(HYP1)
+HYP1$conf.int
+HYP1$p.value
+```
+From our result, we notice that the `p-Value = 0.0606` is greater than `α=0.05` (α for confidence interval of 95%).  The `confidence interval =(-0.171, 7.571)` for the difference of the means of each group spans 0, hence null hypothesis is Failed to Reject. Hence hypothesis one cannot be rejected implying that Orange juice has higher impact on tooth length.
+
+
+Hypothesis #2: 
+-------------
+Higher measure of control variable `dose` effect on target variable `len`.
+
+For this hypothesis, we will consider it in three ways: 
+A. That `dose` measure of 1.0mg has a higher impact on tooth length than `dose` measure of 0.5mg. 
+B. That `dose` measure of 2.0mg has a higher impact on tooth length than `dose` measure of 1.0mg
+C.  That `dose` measure of 2.0mg has a higher impact on tooth length than `dose` measure of 0.5mg
+
+2A: `dose` measure of 1.0mg has a higher impact on tooth length than `dose` measure of 0.5mg----------------------------------------------------------
+-----------------
+```{r Hypothesis 2A, echo=TRUE}
+HYP2A <- t.test(len~dose,paired=F,var.equal=F,data=ToothGrowth[ToothGrowth$dose%in%c(0.5,1),])
+print(HYP2A)
+HYP2A$conf.int
+HYP2A$p.value
+```
+
+From our result, we notice that the `p-Value = 1.268301e-07` is less than `α=0.05` (α for confidence interval of 95%).  The `confidence interval =(-11.983781  -6.276219)` for the difference of the means of each measure level does not spans 0, hence null hypothesis is Rejected. Hence hypothesis 2A is failed to reject implying that dose level of 1.0mg does not really have higher impact on tooth length than dose level 0.5mg.
+
+#2B: `dose` measure of 2.0mg has a higher impact on tooth length than `dose` measure of 1.0mg ----------------------------------------------------------
+-----------------
+
+```{r Hypothesis 2B, echo=TRUE}
+
+HYP2B <- t.test(len~dose,paired=F,var.equal=F,data=ToothGrowth[ToothGrowth$dose%in%c(1,2),])
+
+print(HYP2B)
+
+HYP2B$p.value
+HYP2B$conf.int
+```
+
+From our result, we notice that the `p-Value = 1.90643e-05` is less than `α=0.05` (α for confidence interval of 95%).  The `confidence interval =(-8.996481 -3.733519)` for the difference of the means of each measure level does not spans 0, hence null hypothesis is Rejected. Hence hypothesis 2B is failed to reject implying that dose level of 2.0mg does not really have higher impact on tooth length than dose level 1.0mg.
+
+
+2C: `dose` measure of 0.5mg has a higher impact on tooth length than `dose` measure of 2.0mg ----------------------------------------------------------
+-----------------
+
+```{r Hypothesis 2C, echo=TRUE}
+
+HYP2C <- t.test(len~dose,paired=F,var.equal=F,data=ToothGrowth[ToothGrowth$dose%in%c(0.5,2),])
+
+print(HYP2C)
+
+HYP2C$p.value
+HYP2C$conf.int
+```
+From our result, we notice that the `p-Value = 4.397525e-14` is less than `α=0.05` (α for confidence interval of 95%).  The `confidence interval =(-18.15617 -12.83383)` for the difference of the means of each measure level does not spans 0, hence null hypothesis is Rejected. Hence hypothesis 2C is failed to reject implying that dose level of 2.0mg does not really have higher impact on tooth length than dose level 1.0mg.
+
+By way of conclusion from the above two analysis Hypothesis 2 is Failed to Reject.
+
+
+Hypothesis #3:
+-------------
+In this hypothesis we are looking at:  The combined effect of the control variables `supp` and `dose`, to show that `OJ` has higher impact on target variable `len` for `dose` measures of  0.5, 1 and 2. The following code will prepare the data for further analysis.  
+
+```{r Hypothesis 3 data, echo=TRUE, error=FALSE, warning=FALSE}
+Dose0.5 <- subset(ToothGrowth, dose %in% c(0.5))
+Dose1.0 <- subset(ToothGrowth, dose %in% c(1.0))
+Dose2.0 <- subset(ToothGrowth, dose %in% c(2.0))
+``` 
+<i>The `Null hypothesis` is: There is no correlation between the `Delivery Method` and `Tooth Length` for the given `Dose Level`</i>. And we will consisder it in three different level
+
+3A: “OJ” has higher impact for dose 0.5
+---------------------------------------
+
+```{r Hypothesis 3a, echo=TRUE, error=FALSE, warning=FALSE}
+HYP3a <- t.test(len~supp,paired = F,var.equal = F, data = Dose0.5)
+print(HYP3a)
+
+HYP3a$p.value
+HYP3a$conf.int
+```
+
+From the result above `p-Value =0.006358607` is less than α=0.05 (α for confidence interval of 95%). The `confidence interval = (1.719057 8.780943)`
+for the difference of the means of the `supp` and `dose = 0.5` does not span 0, hence null hypothesis is Rejected, hence hypothesis 3a is Failed to Reject.
+
+3B: “OJ” has higher impact for dose 1.0mg
+-----------------------------------------
+```{r Hypothesis 3b, echo=TRUE, error=FALSE, warning=FALSE}
+HYP3b <- t.test(len~supp,paired = F,var.equal = F, data = Dose1.0)
+print(HYP3a)
+
+HYP3b$p.value
+HYP3b$conf.int
+```
+
+From the result above `p-Value =0.001038376` is less than α=0.05 (α for confidence interval of 95%), `confidence interval = (2.802148 9.057852)` for the difference of the means the `supp` and `dose=1.0mg` does not span 0, hence null hypothesis is Rejected, implying that hypothesis 3b is Failed to Reject.
+
+3C: “OJ” has higher impact for dose 2.0mg
+-----------------------------------------
+```{r Hypothesis 3c, echo=TRUE, error=FALSE, warning=FALSE}
+HYP3c <- t.test(len~supp, paired = F,var.equal = F, data = Dose2.0)
+print(HYP3c)
+
+HYP3c$p.value
+HYP3c$conf.int
+```
+
+From the result above `p-Value =0.9638516` is greater than α=0.05 (α for confidence interval of 95%), `confidence interval = (-3.79807  3.63807)` for the difference of the means the `supp` and `dose=2.0mg` does span 0, hence null hypothesis does not failed to Rejected, implying that hypothesis 3b is accepted.
+
+By way of conclusion for Hypothesis 3 is Failed to Reject for lower doses of `supp` and does not fail to reject for higher `dose`.
+
+Hypothesis #4:
+-------------
+In this hypothesis we are looking at:  The combined effect of the control variables `supp` and `dose`, to show that `OJ and VC` has higher impact on target variable `len` for `dose` measures of 2.0mg. The following code will produce the result of our analysis.  
+
+```{r Hypothesis 4, echo=TRUE, error=FALSE, warning=FALSE}
+HYP4 <- t.test(len~supp, paired = F,var.equal = F, data = ToothGrowth[ToothGrowth$dose == 2,])
+print(HYP4)
+
+HYP4$p.value
+HYP4$conf.int
+```
+
+From the result above `p-Value =0.9638516` is greater than α=0.05 (α for confidence interval of 95%), `confidence interval = (-3.79807  3.63807)` for the difference of the means the `supp` and `dose=2.0mg` does span 0, hence null hypothesis does not failed to Rejected, implying that hypothesis 4 is accepted.
+
+It will be observed that the result for hypothesis four is similar to the result of hypothesis 3c. Hence we will say that `supp`types and `dose at higher levels` does not differ in effect towards tooth `length`.
+
+
+CONCLUSIONS:  
+------------  
+Based on our analysis the following conclusions are arrived at:
+
+1. Increase in Supplement `Dose Levels` leads to overall increase in `Tooth Length`.  
+2. `Supplement types` has no overall significant impact on `Tooth Length`, but for `0.5` and `1.0 Dose levels`. `Orange Juice` increases `Tooth Length` more faster compared to `Ascorbic Acid/ Vitamin `, but for `2.0mg Dose Level` there is no significant difference in the increase of `Tooth Length` by both `Supplement`.  
+3. For combined impact of control variables, there is significant difference on target variable `Tooth length` for different values of `supplement` for `dose 0.5 and 1`. There is no significant difference for different values
+of `supplement` for `dose 2`.
+
+ASSUMPTIONS NEEDED FOR THE CONCLUSIONS:  
+---------------------------------------  
+1. Data provided is independently distributed. Members of the sample population, i.e. the 60 guinea pigs, are representative of the entire population of guinea pigs. This assumption  allows us to generalize the results.  
+2. The experiment was done with random assignment of guinea pigs to different Supplement `Dose Level` categories and Supplement `Delivery Methods` to take care of noise that might affect the outcome.  
+3. For the `t-tests`, the variances are assumed to be different for the two groups being compared. This assumption is less stronger than the case in which the variances are assumed to be equal.  
+4.Higher value of “length” indicates a higher impact of the `supplement`.
+5. Higher value of “dose” indicates increased dosages administration.
+6. Data follows T distribution as the observations are limited.
+
